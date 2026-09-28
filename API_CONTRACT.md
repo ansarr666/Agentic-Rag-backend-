@@ -8,7 +8,7 @@ Backend base URL is supplied to the frontend by `VITE_API_BASE_URL` or `/config.
 | --- | --- | --- | --- | --- |
 | POST | `/api/public/lead` | JSON `name,email,phone,country_code,company?` | `success,lead_id,conversation_id` | Public |
 | POST | `/api/public/conversation` | JSON `question,history:[{role,content}],lead_id,conversation_id,name` | `answer,suggested_questions, intent` | Public |
-| POST | `/api/public/intent` | JSON `lead_id,conversation_id,phone,requested_action,summary` | `success,confirmation_email_sent,message` | Public |
+| POST | `/api/public/intent` | JSON `lead_id,conversation_id,phone,requested_action,summary` | `success,message` | Public |
 | POST | `/api/query` | JSON `question,user_role,user_groups?` | Structured RAG response with answer, sources, decision, evidence, trace | `X-API-Key` or matching bearer key when configured |
 | POST | `/api/documents/upload` | `multipart/form-data`, one or more `file` parts; txt, pdf, md, docx, html, htm | `success,uploaded,total_documents,total_chunks` | Same as query |
 | GET | `/api/integrations/google-drive/status` | None | Connector status JSON | Same as query |
@@ -30,8 +30,6 @@ The browser sends `X-API-Key` for admin requests after the operator enters it. T
 | GET | `/api/health` | Health, provider, uptime, connector status |
 | GET | `/api/auth/status` | API key configuration and request auth status |
 | POST | `/api/public/chat` | Stateless prospect query: `question` to `answer,suggested_queries` |
-| POST | `/api/public/otp/send` | JSON `email,purpose`; send email OTP |
-| POST | `/api/public/otp/verify` | JSON `email,code,purpose`; verify OTP |
 | GET | `/api/admin/leads` | Admin key; `{"leads":[...]}` |
 | GET | `/api/integrations/google-drive/authorize` | Redirect browser to Google consent; backend `GOOGLE_REDIRECT_URI` |
 | GET | `/api/integrations/google-drive/callback` | Google calls backend with `code` or `error`; success `{"connected":true}` |

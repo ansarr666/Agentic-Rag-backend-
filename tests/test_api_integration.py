@@ -6,10 +6,14 @@ from pathlib import Path
 
 
 @pytest.fixture(autouse=True)
-def local_database(monkeypatch):
+def local_database(tmp_path, monkeypatch):
     """Keep API integration tests isolated from the configured Supabase database."""
     monkeypatch.setenv("DATABASE_URL", "")
     monkeypatch.setenv("ALLOWED_ORIGINS", "http://localhost:5173")
+    import db
+    db_file = tmp_path / "test_api.db"
+    monkeypatch.setattr(db, "DB_PATH", db_file)
+    db.init_db()
 
 
 def test_lead_country_code_and_ten_digit_phone(tmp_path, monkeypatch):

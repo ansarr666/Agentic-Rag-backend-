@@ -83,13 +83,13 @@ if SENTRY_DSN:
         dsn=SENTRY_DSN,
         environment=os.getenv("FLASK_ENV", "production"),
         release=os.getenv("APP_VERSION", "1.0.0"),
-        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE", "0")),
+        traces_sample_rate=float(os.getenv("SENTRY_TRACES_SAMPLE_RATE") or "0"),
         send_default_pii=False,
     )
     logger.info("Sentry error reporting enabled.")
 
 # Behind a load balancer, trust X-Forwarded-For from this many proxies so limits see real client IPs
-TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT", "0"))
+TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT") or "0")
 if TRUSTED_PROXY_COUNT:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=TRUSTED_PROXY_COUNT, x_proto=TRUSTED_PROXY_COUNT)
 
@@ -611,20 +611,7 @@ def public_intent():
                 if conversation_id:
                     lead["conversation_id"] = conversation_id
                 lead["updated_at"] = datetime.now(timezone.utc).isoformat()
-                lead["confirmation_email_sent"] = True
                 updated = True
-
-                # Automatically send branded confirmation email via Resend
-                target_email = lead.get("email")
-                target_name = lead.get("name")
-                if target_email:
-                    from email_service import send_confirmation
-                    send_confirmation(
-                        to=target_email,
-                        name=target_name or "",
-                        phone=phone or lead.get("phone", ""),
-                        summary=summary or lead.get("conversation_summary", "")
-                    )
                 break
         if updated:
             leads_path.write_text(json.dumps(leads, indent=2, ensure_ascii=False), encoding="utf-8")
@@ -643,77 +630,11 @@ def public_intent():
 
     return jsonify({
         "success": True,
-        "confirmation_email_sent": True,
-        "message": "Discovery call request confirmed. A confirmation email has been sent."
+        "message": "Discovery call request confirmed. Our team will reach out shortly."
     })
 
 
-# ── OTP Endpoints ────────────────────────────────────────
 
-from email_service import generate_otp, otp_expiry, send_otp
-
-@app.route("/api/public/otp/send", methods=["POST"])
-def otp_send():
-    """Send a 6-digit OTP to the provided email address."""
-    if public_rate_limited(limit=5, window=60):
-        return jsonify({"error": "Too many requests. Please wait before requesting another code."}), 429
-
-    data = request.get_json(silent=True) or {}
-    email = str(data.get("email") or "").strip().lower()[:254]
-    purpose = str(data.get("purpose") or "lead").strip()
-
-    if purpose not in ("lead", "admin"):
-        purpose = "lead"
-
-    is_valid, err_msg = validate_work_email(email)
-    if not is_valid:
-        return jsonify({"error": err_msg}), 400
-
-    otp = generate_otp()
-    expires_at = otp_expiry().isoformat()
-
-    try:
-        db.save_otp(email=email, code=otp, purpose=purpose, expires_at=expires_at)
-    except Exception as e:
-        logger.error(f"Failed to save OTP for {email}: {e}", exc_info=True)
-        return jsonify({"error": "Could not generate verification code. Please try again."}), 500
-
-    sent = send_otp(to=email, otp=otp, purpose=purpose)
-    if not sent:
-        return jsonify({"error": "Could not send verification email. Please try again."}), 500
-
-    logger.info(f"OTP sent to {email} for purpose={purpose}")
-    return jsonify({"success": True, "message": f"A 6-digit code has been sent to {email}."})
-
-
-@app.route("/api/public/otp/verify", methods=["POST"])
-def otp_verify():
-    """Verify the OTP code submitted by the user."""
-    if public_rate_limited(limit=10, window=60):
-        return jsonify({"error": "Too many attempts. Please wait before trying again."}), 429
-
-    data = request.get_json(silent=True) or {}
-    email = str(data.get("email") or "").strip().lower()[:254]
-    code = str(data.get("code") or "").strip()[:6]
-    purpose = str(data.get("purpose") or "lead").strip()
-
-    if not email or not code:
-        return jsonify({"error": "Email and code are required."}), 400
-
-    if purpose not in ("lead", "admin"):
-        purpose = "lead"
-
-    try:
-        success, error = db.verify_otp(email=email, code=code, purpose=purpose)
-    except Exception as e:
-        logger.error(f"OTP verification error for {email}: {e}", exc_info=True)
-        return jsonify({"error": "Verification failed. Please try again."}), 500
-
-    if not success:
-        return jsonify({"error": error}), 400
-
-    logger.info(f"OTP verified successfully for {email} purpose={purpose}")
-    return jsonify({"success": True, "verified": True, "email": email})
 
 
 @app.route("/api/admin/leads", methods=["GET"])
