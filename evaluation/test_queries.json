@@ -1,0 +1,212 @@
+[
+  {
+    "id": "q001",
+    "query": "What does OrionSoft Technologies do and what services do you provide?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["websites", "software", "mobile apps", "marketing"],
+    "intent": "service_inquiry"
+  },
+  {
+    "id": "q002",
+    "query": "Are you a software company or a marketing company?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["both", "website", "app", "marketing"],
+    "intent": "service_inquiry"
+  },
+  {
+    "id": "q003",
+    "query": "Do you work with small businesses or only big companies?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["different sizes", "small businesses", "larger companies"],
+    "intent": "general_factual"
+  },
+  {
+    "id": "q004",
+    "query": "Do you work with clients outside India?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["yes", "different locations", "online tools", "calls"],
+    "intent": "general_factual"
+  },
+  {
+    "id": "q005",
+    "query": "Can you build on-demand service apps like Zomato or Uber?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["on demand", "live tracking", "service based"],
+    "intent": "app_development"
+  },
+  {
+    "id": "q006",
+    "query": "Can you add login with Google or Facebook to my app?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["social login", "easier", "sign up"],
+    "intent": "app_development"
+  },
+  {
+    "id": "q007",
+    "query": "How long does it take to build an app?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["depends", "features", "complexity", "simple app", "faster"],
+    "intent": "app_development"
+  },
+  {
+    "id": "q008",
+    "query": "Do you provide support after the app is launched?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["yes", "support", "launch", "fix issues", "running smoothly"],
+    "intent": "app_development"
+  },
+  {
+    "id": "q009",
+    "query": "What kind of software do you build for businesses?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["booking systems", "inventory tools", "claims processing", "internal business tools"],
+    "intent": "software_development"
+  },
+  {
+    "id": "q010",
+    "query": "Do you help businesses move to the cloud?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["cloud", "systems", "data", "safely", "smoothly"],
+    "intent": "cloud_services"
+  },
+  {
+    "id": "q011",
+    "query": "Do you offer cybersecurity services and what happens if my business gets hacked?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["protect", "data", "systems", "online threats", "security gaps"],
+    "intent": "cybersecurity"
+  },
+  {
+    "id": "q012",
+    "query": "Do I need cybersecurity if I am a small business?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["yes", "small businesses", "targeted", "weaker security", "cheaper"],
+    "intent": "cybersecurity"
+  },
+  {
+    "id": "q013",
+    "query": "What can AI actually do for my business?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["answer customer questions", "recommend products", "predict"],
+    "intent": "ai_and_chatbot"
+  },
+  {
+    "id": "q014",
+    "query": "What is Generative AI and do you work with it?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["Generative AI", "AI"],
+    "intent": "ai_and_chatbot"
+  },
+  {
+    "id": "q015",
+    "query": "Can you build a chatbot for my website and what can it do?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["chatbot", "customer questions", "any time of day", "guide"],
+    "intent": "ai_and_chatbot"
+  },
+  {
+    "id": "q016",
+    "query": "Will the chatbot understand my business and services properly?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["train", "actual website content", "accurate answers", "generic replies"],
+    "intent": "ai_and_chatbot"
+  },
+  {
+    "id": "q017",
+    "query": "What is staff augmentation and can I hire dedicated developers from your team?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["staff augmentation", "hire", "skilled", "developers"],
+    "intent": "staff_augmentation"
+  },
+  {
+    "id": "q018",
+    "query": "Will the hired developer work directly with my team?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["yes", "closely", "meetings", "in house team member"],
+    "intent": "staff_augmentation"
+  },
+  {
+    "id": "q019",
+    "query": "Do you offer SEO services and how do they help businesses?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["SEO", "higher", "Google", "find"],
+    "intent": "seo_services"
+  },
+  {
+    "id": "q020",
+    "query": "How long does SEO take to show results?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["few months", "industry", "competition", "website condition"],
+    "intent": "seo_services"
+  },
+  {
+    "id": "q021",
+    "query": "What is the difference between Google Ads and Facebook Ads?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["Google Ads", "Facebook", "searching", "interests", "behavior"],
+    "intent": "paid_advertising"
+  },
+  {
+    "id": "q022",
+    "query": "Can you help design a logo and build a complete brand identity?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["logo", "brand identity", "colors", "fonts"],
+    "intent": "branding_design"
+  },
+  {
+    "id": "q023",
+    "query": "Which social media platforms do you work with?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["Instagram", "Facebook", "LinkedIn"],
+    "intent": "social_media"
+  },
+  {
+    "id": "q024",
+    "query": "Can SEO guarantee the number one spot on Google?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["guarantee", "no one"],
+    "intent": "seo_services"
+  },
+  {
+    "id": "q025",
+    "query": "Is SEO a one-time service or ongoing?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["ongoing", "search engines", "competition", "consistent"],
+    "intent": "seo_services"
+  },
+  {
+    "id": "q026",
+    "query": "Can AI personalize the experience for my customers?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["products", "offers", "behavior", "sales", "engagement"],
+    "intent": "ai_and_chatbot"
+  },
+  {
+    "id": "q027",
+    "query": "What happens after I book a free discovery call?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["reach out", "scheduled time", "requirement", "clear plan", "pricing"],
+    "intent": "pricing_engagement"
+  },
+  {
+    "id": "q028",
+    "query": "How much does it cost to build an app?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["depends", "requirements", "features", "platforms", "free call"],
+    "intent": "pricing_engagement"
+  },
+  {
+    "id": "q029",
+    "query": "Do you offer packages I can choose from for services like SEO?",
+    "ground_truth_doc": "OrionSoft_Chatbot_QA.pdf",
+    "expected_keywords": ["packages", "SEO", "social media", "specific goals", "free call"],
+    "intent": "pricing_engagement"
+  },
+  {
+    "id": "q030",
+    "query": "What is the company's refund policy for cancelled projects?",
+    "ground_truth_doc": "UNANSWERABLE",
+    "expected_keywords": ["not specify this information"],
+    "intent": "general_factual"
+  }
+]

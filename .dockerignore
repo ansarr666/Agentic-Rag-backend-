@@ -1,0 +1,38 @@
+# Environments & secrets
+venv/
+.venv/
+.env
+.env.*
+
+# VCS, editors, Docker files
+.git/
+.gitignore
+.vscode/
+.idea/
+.claude/
+Dockerfile
+.dockerignore
+docker-compose.yml
+
+# Caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.coverage
+htmlcov/
+.ipynb_checkpoints/
+*.log
+
+# Not needed at runtime
+tests/
+results/
+evaluation/results/
+notebooks/
+
+# Runtime user data (PII) — never bake into the image; search indices are kept
+data/leads.json
+data/conversations.json
+data/*.db*
+data/indices/google_drive_state.json
+
+# evaluation/ is intentionally NOT excluded: app.py imports evaluation.run_eval at startup
