@@ -272,13 +272,14 @@ DISPOSABLE_EMAIL_DOMAINS = {
     "getnada.com", "inboxbear.com", "mailnesia.com", "guerrillamailblock.com"
 }
 
-# Personal email domains that are explicitly allowed
+# Personal email domains that are explicitly allowed (fast-pathed without DNS check)
 ALLOWED_PERSONAL_DOMAINS = {
-    "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk", "yahoo.fr",
+    "gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk", "yahoo.fr", "ymail.com",
     "hotmail.com", "hotmail.co.uk", "outlook.com", "outlook.de", "live.com", "msn.com",
     "icloud.com", "me.com", "mac.com",
     "aol.com", "zoho.com", "zohomail.com",
-    "proton.me", "protonmail.com", "pm.me"
+    "proton.me", "protonmail.com", "pm.me",
+    "mail.com", "gmx.com", "gmx.net", "gmx.de", "web.de", "fastmail.com", "t-online.de", "rediffmail.com"
 }
 
 # Common domain typos mapped to their intended domain
