@@ -44,6 +44,8 @@ def test_db_persistence(tmp_path, monkeypatch):
     import db
     db_file = tmp_path / "test_app.db"
     monkeypatch.setattr(db, "DB_PATH", db_file)
+    monkeypatch.setattr(db, "USE_POSTGRES", False)
+    monkeypatch.setattr(db, "DATABASE_URL", "")
 
     db.init_db()
     assert db_file.exists()

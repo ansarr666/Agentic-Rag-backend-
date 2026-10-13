@@ -191,12 +191,9 @@ class QueryEngine:
         "cybr": {"display": "cybersecurity", "search": "cybersecurity security protect"},
 
         # Chatbots & AI
-        "chatbt": {"display": "chatbot", "search": "chatbot AI assistant WhatsApp"},
-        "chabot": {"display": "chatbot", "search": "chatbot AI assistant WhatsApp"},
-        "chatbto": {"display": "chatbot", "search": "chatbot AI assistant WhatsApp"},
-        "whatapp": {"display": "WhatsApp", "search": "WhatsApp chatbot"},
-        "watsapp": {"display": "WhatsApp", "search": "WhatsApp chatbot"},
-        "whatsap": {"display": "WhatsApp", "search": "WhatsApp chatbot"},
+        "chatbt": {"display": "chatbot", "search": "chatbot AI assistant"},
+        "chabot": {"display": "chatbot", "search": "chatbot AI assistant"},
+        "chatbto": {"display": "chatbot", "search": "chatbot AI assistant"},
 
         # Marketing & SEO
         "marketng": {"display": "marketing", "search": "marketing digital ads SEO"},
@@ -220,7 +217,7 @@ class QueryEngine:
         "mobile", "android", "iphone", "ios", "application",
         "developer", "developers", "hiring", "augmentation", "cloud",
         "aws", "cybersecurity", "security", "pricing", "estimate",
-        "chatbot", "ai", "whatsapp", "seo", "marketing", "ads",
+        "chatbot", "ai", "seo", "marketing", "ads",
         "payment", "custom", "store", "online", "discovery"
     ]
 
@@ -288,8 +285,8 @@ class QueryEngine:
             return "Do you help businesses move to the cloud like AWS or Google Cloud?"
         if any(w in q_lower for w in ["secu", "hack", "cyb"]):
             return "Do you offer cybersecurity and website protection services?"
-        if any(w in q_lower for w in ["chat", "bot", "ai", "whatsap"]):
-            return "Can you build an AI chatbot for website or WhatsApp?"
+        if any(w in q_lower for w in ["chat", "bot", "ai"]):
+            return "Can you build an AI assistant or chatbot for our website?"
         if any(w in q_lower for w in ["seo", "rank"]):
             return "Do you offer SEO services to improve search ranking?"
         if any(w in q_lower for w in ["ad", "market", "social"]):

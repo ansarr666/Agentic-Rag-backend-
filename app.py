@@ -157,6 +157,19 @@ _public_rate_limits = defaultdict(list)
 _leads_lock = Lock()
 _conversations_lock = Lock()
 
+from concurrent.futures import ThreadPoolExecutor
+_db_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="db_sync_pool")
+
+def _dispatch_db_task(fn, *args, **kwargs):
+    """Run synchronously in testing, or dispatch non-blocking in background thread pool."""
+    if app.testing:
+        try:
+            fn(*args, **kwargs)
+        except Exception as e:
+            logger.warning(f"Test DB task failed: {e}")
+    else:
+        _db_pool.submit(fn, *args, **kwargs)
+
 def public_rate_limited(limit: int = 10, window: int = 60) -> bool:
     ip = request.remote_addr or "unknown"
     now = time.time()
@@ -324,7 +337,9 @@ def check_domain_mail_servers(domain: str) -> tuple[bool, str]:
             import socket
             socket.gethostbyname(domain)
             return True, ""
-        except (socket.gaierror, socket.herror, OSError):
+        except (socket.gaierror, socket.herror, OSError, UnicodeError):
+            return False, f"The domain '@{domain}' could not be reached. Please check for typos."
+        except Exception:
             return False, f"The domain '@{domain}' could not be reached. Please check for typos."
     except Exception:
         pass
@@ -341,6 +356,9 @@ def validate_work_email(email: str) -> tuple[bool, str]:
         return False, "Please enter a valid email address."
 
     # 1. Syntax check
+    if ".." in email or email.startswith(".") or email.endswith("."):
+        return False, "Please provide a valid email address (e.g. name@company.com)."
+
     if not re.fullmatch(r"^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$", email):
         return False, "Please provide a valid email address (e.g. name@company.com)."
 
@@ -429,11 +447,8 @@ def public_lead():
                     lead["intent_level"] = clean("intent_level", 40) or lead.get("intent_level", "medium")
                     lead["updated_at"] = now
                     leads_path.write_text(json.dumps(leads, indent=2, ensure_ascii=False), encoding="utf-8")
-                    # Sync updated lead to Supabase
-                    try:
-                        db.save_lead(lead)
-                    except Exception as db_err:
-                        logger.warning(f"Supabase lead update failed for {existing_lead_id}: {db_err}")
+                    # Sync updated lead to Supabase non-blocking
+                    _dispatch_db_task(db.save_lead, lead)
                     return jsonify({
                         "success": True,
                         "lead_id": existing_lead_id,
@@ -462,11 +477,8 @@ def public_lead():
         leads.append(lead_record)
         leads_path.write_text(json.dumps(leads, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    # Save new lead to Supabase
-    try:
-        db.save_lead(lead_record)
-    except Exception as db_err:
-        logger.warning(f"Supabase lead save failed for {lead_id}: {db_err}")
+    # Save new lead to Supabase non-blocking
+    _dispatch_db_task(db.save_lead, lead_record)
 
     return jsonify({"success": True, "lead_id": lead_id, "conversation_id": conversation_id})
 
@@ -515,16 +527,19 @@ def _persist_conversation(lead_id: str, conversation_id: str, name: str, questio
         store[conversation_id] = entry
         path.write_text(json.dumps(store, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    # Dual-write to the configured database (Supabase PostgreSQL or local SQLite).
-    try:
-        user_id = lead_id or f"anon_{conversation_id[:12]}"
-        db.upsert_user(user_id=user_id, email=None, role="guest", provider="lead" if lead_id else "anonymous")
-        title = f"Chat with {name}" if name else "Visitor Chat"
-        db.ensure_conversation(conversation_id=conversation_id, user_id=user_id, title=title)
-        db.add_message(conversation_id, role="user", content=question, metadata={"lead_id": lead_id, "name": name})
-        db.add_message(conversation_id, role="assistant", content=answer, metadata={"lead_id": lead_id, "name": name})
-    except Exception as db_err:
-        logger.warning(f"Database write failed for conversation {conversation_id}: {db_err}")
+    def _sync_db():
+        try:
+            user_id = lead_id or f"anon_{conversation_id[:12]}"
+            db.upsert_user(user_id=user_id, email=None, role="guest", provider="lead" if lead_id else "anonymous")
+            title = f"Chat with {name}" if name else "Visitor Chat"
+            db.ensure_conversation(conversation_id=conversation_id, user_id=user_id, title=title)
+            db.add_message(conversation_id, role="user", content=question, metadata={"lead_id": lead_id, "name": name})
+            db.add_message(conversation_id, role="assistant", content=answer, metadata={"lead_id": lead_id, "name": name})
+        except Exception as db_err:
+            logger.warning(f"Database write failed for conversation {conversation_id}: {db_err}")
+
+    # Dual-write to the configured database non-blocking
+    _dispatch_db_task(_sync_db)
 
 
 @app.route("/api/public/conversation", methods=["POST"])
@@ -617,17 +632,15 @@ def public_intent():
         if updated:
             leads_path.write_text(json.dumps(leads, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    # Update lead booking record in Supabase
+    # Update lead booking record in Supabase non-blocking
     if updated:
-        try:
-            db.update_lead_booking(
-                lead_id=lead_id,
-                phone=phone,
-                summary=summary,
-                requested_action=action,
-            )
-        except Exception as db_err:
-            logger.warning(f"Supabase booking update failed for lead {lead_id}: {db_err}")
+        _dispatch_db_task(
+            db.update_lead_booking,
+            lead_id=lead_id,
+            phone=phone,
+            summary=summary,
+            requested_action=action,
+        )
 
     return jsonify({
         "success": True,

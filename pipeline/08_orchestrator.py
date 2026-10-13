@@ -45,6 +45,8 @@ from .tools.calculator import CalculatorTool
 from .tools.web_search import WebSearchTool
 from .tools.google_drive import GoogleDriveConnector
 from .agent_router import AgentRouter, RoutingDecision, detect_small_talk, SMALL_TALK_REPLIES
+from .guardrails import GuardrailEvaluator, GuardrailAction
+from .semantic_cache import SemanticCache
 from .evidence_evaluator import EvidenceEvaluator
 from .structured_contract import (
     AgentResponseContract,
@@ -241,6 +243,7 @@ class RAGPipeline:
         self.calculator = CalculatorTool
         self.web_search = WebSearchTool
         self.google_drive = GoogleDriveConnector()
+        self.semantic_cache = SemanticCache(similarity_threshold=0.92, ttl_seconds=86400.0, max_entries=500)
 
     def query(
         self,
@@ -257,7 +260,26 @@ class RAGPipeline:
         trace: List[ExecutionStep] = []
         user_groups = user_groups or []
 
-        # ── 0. Small-talk gate: exact-match greetings/acks skip routing, retrieval and LLM ──
+        # ── 0. Guardrails Gate: Prompt Injection, Off-Topic, Safety ──
+        guard_res = GuardrailEvaluator.evaluate(user_question)
+        if guard_res.action in (GuardrailAction.REFUSE_PROMPT_INJECTION, GuardrailAction.REFUSE_OFF_TOPIC):
+            elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+            trace.append(ExecutionStep(stage="guardrail_gate", status="completed", details=f"Blocked: {guard_res.category} ({guard_res.reason})", latency_ms=round(elapsed_ms, 2)))
+            return AgentResponseContract(
+                status="unanswerable",
+                answer=guard_res.response or "This request is outside the authorized scope.",
+                decision=AgentDecision.ABSTAIN,
+                evidence_state=EvidenceState.INSUFFICIENT,
+                sources=[],
+                tools_used=[],
+                confidence_label="Out of business scope",
+                confidence_score=0.0,
+                execution_trace=trace,
+                latency_ms=round(elapsed_ms, 2),
+                suggested_queries=guard_res.suggested_questions or []
+            )
+
+        # ── 0b. Small-talk gate: exact-match greetings/acks skip routing, retrieval and LLM ──
         small_talk = detect_small_talk(user_question)
         if small_talk:
             elapsed_ms = (time.perf_counter() - start_time) * 1000.0
@@ -704,6 +726,17 @@ class RAGPipeline:
         start_time = time.perf_counter()
         history = history or []
 
+        # ── 0. Guardrails Gate: Multi-layer Safety & Scope Inspection ──
+        guard_res = GuardrailEvaluator.evaluate(user_question, history=history)
+        if guard_res.action != GuardrailAction.PASS:
+            elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+            return {
+                "answer": guard_res.response,
+                "suggested_questions": guard_res.suggested_questions or [],
+                "retrieved_chunks": 0,
+                "latency_ms": round(elapsed_ms, 2),
+            }
+
         small_talk = detect_small_talk(user_question)
         if small_talk:
             suggestions = []
@@ -721,10 +754,30 @@ class RAGPipeline:
                 "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
             }
 
+        # ── 1. Semantic Cache Lookup (Sub-15ms safe path for standardized public questions) ──
+        q_emb = None
+        if self.semantic_cache.is_cacheable(user_question, history=history, visitor_name=visitor_name):
+            try:
+                import numpy as np
+                q_emb = np.array(self.embedder.embed_query(user_question), dtype=np.float32)
+                cached = self.semantic_cache.lookup(user_question, q_emb, history=history, visitor_name=visitor_name)
+                if cached:
+                    ans, sugs, sim = cached
+                    elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+                    return {
+                        "answer": ans,
+                        "suggested_questions": sugs,
+                        "retrieved_chunks": 0,
+                        "latency_ms": round(elapsed_ms, 2),
+                        "cached": True,
+                    }
+            except Exception as e:
+                logger.debug(f"Semantic cache lookup error: {e}")
+
         prospect_web_search = bool(self.config.get("knowledge", {}).get("prospect_web_search", True))
         initial_route = AgentRouter.route_initial(user_question)
 
-        # Direct external/public questions (e.g. latest tech releases) go to web search.
+        # Direct external/public questions (e.g. latest tech releases) go to web search only when explicitly routed.
         if prospect_web_search and initial_route.decision == AgentDecision.WEB_SEARCH:
             web_answer = self._web_search_conversational(user_question)
             if web_answer is not None:
@@ -749,23 +802,18 @@ class RAGPipeline:
 
         top_chunks = self.reranker.rerank(rerank_q, permitted, top_n=self.top_n) if permitted else []
 
-        # Non-confidential questions with no relevant company knowledge fall back to web search.
-        if prospect_web_search and not initial_route.is_internal_confidential:
-            ev = EvidenceEvaluator.evaluate(user_question, top_chunks, query_info=q_info)
-            if ev.state == EvidenceState.INSUFFICIENT:
-                web_answer = self._web_search_conversational(user_question)
-                if web_answer is not None:
-                    answer, suggestions = web_answer
-                    return {
-                        "answer": answer,
-                        "suggested_questions": suggestions,
-                        "retrieved_chunks": 0,
-                        "latency_ms": round((time.perf_counter() - start_time) * 1000.0, 2),
-                    }
-
         answer, suggestions, _gen_ms = self.generator.generate_conversational_response(
             user_question, top_chunks, history=history, visitor_name=visitor_name
         )
+
+        # Store verified answer in semantic cache if safe and eligible
+        if q_emb is not None and answer:
+            try:
+                self.semantic_cache.store(
+                    user_question, q_emb, answer, suggestions, history=history, visitor_name=visitor_name
+                )
+            except Exception as e:
+                logger.debug(f"Semantic cache store error: {e}")
 
         total_lat = (time.perf_counter() - start_time) * 1000.0
 

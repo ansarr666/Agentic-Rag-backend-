@@ -32,7 +32,7 @@ _INTENT_KEYWORDS = (
     "tax", "percent", "%",
     # public-widget service topics
     "app", "web", "software", "seo", "marketing", "pric", "service", "develop", "mobile",
-    "android", "ios", "iphone", "cloud", "security", "commerce", "store", "chatbot", "whatsapp",
+    "android", "ios", "iphone", "cloud", "security", "commerce", "store", "chatbot",
     "payment", "server", "custom", "design",
 )
 
