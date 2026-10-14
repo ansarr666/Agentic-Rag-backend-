@@ -15,9 +15,7 @@ fsspec==2026.9.0
 gunicorn==26.2.0
 h11==0.16.0
 hf-xet==1.6.0
-httpcore2==2.13.0
 httpcore==1.0.9
-httpx2==2.13.0
 httpx==0.28.1
 huggingface_hub==1.33.0
 idna==3.20
@@ -72,4 +70,4 @@ resend==2.48.0
 psycopg2-binary==2.9.13
 python-docx==1.2.0
 beautifulsoup4==4.15.0
-redisredis>=3
+redis>=3
