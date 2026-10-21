@@ -606,6 +606,12 @@ def public_intent():
     if phone and len(re.sub(r"\D", "", phone)) < 7:
         return jsonify({"error": "Please provide a valid phone number with at least 7 digits."}), 400
 
+    from email_service import generate_calendar_links
+    cal_links = generate_calendar_links(
+        title="OrionSoft Discovery Call",
+        summary=summary,
+    )
+
     leads_path = PROJECT_ROOT / "data" / "leads.json"
     with _leads_lock:
         leads = []
@@ -644,11 +650,23 @@ def public_intent():
 
     return jsonify({
         "success": True,
-        "message": "Discovery call request confirmed. Our team will reach out shortly."
+        "message": "Discovery call request confirmed. Our team will reach out shortly.",
+        "calendar_links": cal_links,
     })
 
 
-
+@app.route("/api/public/calendar/invite.ics", methods=["GET"])
+def public_calendar_invite():
+    """Download standard .ics iCalendar file for discovery calls."""
+    from email_service import generate_ics
+    summary = request.args.get("summary", "")[:500]
+    ics_content = generate_ics(summary=summary)
+    from flask import Response
+    return Response(
+        ics_content,
+        mimetype="text/calendar",
+        headers={"Content-Disposition": "attachment; filename=discovery_call.ics"},
+    )
 
 
 @app.route("/api/admin/leads", methods=["GET"])

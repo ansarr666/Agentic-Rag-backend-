@@ -274,3 +274,37 @@ def test_google_drive_oauth_endpoints(monkeypatch):
     res_nocode = client.get("/api/integrations/google-drive/callback")
     assert res_nocode.status_code == 400
     assert "missing" in res_nocode.get_json()["error"].lower()
+
+
+def test_calendar_booking_capability(tmp_path, monkeypatch):
+    """Verify calendar links generation on booking and .ics download endpoint."""
+    import app as app_module
+    client = app_module.app.test_client()
+
+    # 1. Test .ics download endpoint
+    res = client.get("/api/public/calendar/invite.ics?summary=Enterprise%20AI%20POC")
+    assert res.status_code == 200
+    assert "text/calendar" in res.headers.get("Content-Type", "")
+    assert "BEGIN:VCALENDAR" in res.data.decode("utf-8")
+    assert "Enterprise AI POC" in res.data.decode("utf-8")
+
+    # 2. Test /api/public/intent returns calendar links
+    lead_id = "cal_test_lead_99"
+    (tmp_path / "data").mkdir(exist_ok=True)
+    leads_file = tmp_path / "data" / "leads.json"
+    leads_file.write_text(json.dumps([{"lead_id": lead_id, "name": "Jane", "email": "jane@example.com"}]))
+    monkeypatch.setattr(app_module, "PROJECT_ROOT", tmp_path)
+
+    intent_res = client.post("/api/public/intent", json={
+        "lead_id": lead_id,
+        "phone": "+1 555 444 3322",
+        "summary": "Agentic pipeline consultation",
+        "requested_action": "Book a Discovery Call"
+    })
+    assert intent_res.status_code == 200
+    payload = intent_res.get_json()
+    assert payload["success"] is True
+    assert "calendar_links" in payload
+    assert "calendar.google.com" in payload["calendar_links"]["google"]
+    assert "outlook.live.com" in payload["calendar_links"]["outlook"]
+
