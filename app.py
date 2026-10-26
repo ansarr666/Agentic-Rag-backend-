@@ -480,6 +480,10 @@ def public_lead():
     # Save new lead to Supabase non-blocking
     _dispatch_db_task(db.save_lead, lead_record)
 
+    # Dispatch instant alert to Rahul / Sales Inbox
+    from email_service import send_sales_alert
+    _dispatch_db_task(send_sales_alert, lead_record, "new_lead")
+
     return jsonify({"success": True, "lead_id": lead_id, "conversation_id": conversation_id})
 
 
@@ -638,7 +642,7 @@ def public_intent():
         if updated:
             leads_path.write_text(json.dumps(leads, indent=2, ensure_ascii=False), encoding="utf-8")
 
-    # Update lead booking record in Supabase non-blocking
+    # Update lead booking record in Supabase non-blocking and alert sales team
     if updated:
         _dispatch_db_task(
             db.update_lead_booking,
@@ -647,6 +651,22 @@ def public_intent():
             summary=summary,
             requested_action=action,
         )
+        # Dispatch instant discovery call notification to Rahul / sales inbox
+        from email_service import send_sales_alert, send_confirmation
+        for l in leads:
+            if l.get("lead_id") == lead_id:
+                _dispatch_db_task(send_sales_alert, l, "discovery_call")
+                target_email = l.get("email")
+                if target_email:
+                    _dispatch_db_task(
+                        send_confirmation,
+                        to=target_email,
+                        name=l.get("name") or "",
+                        phone=phone or l.get("phone", ""),
+                        summary=summary or l.get("conversation_summary", ""),
+                        calendar_links=cal_links,
+                    )
+                break
 
     return jsonify({
         "success": True,
