@@ -349,6 +349,21 @@ class LLMProvider:
             logger.warning(f"OpenAI API call failed: {e}")
             return None
 
+    def _call_openrouter(self, prompt: str, system_prompt: str, api_key: str, timeout: float = 10.0) -> Optional[str]:
+        """Execute request against the OpenRouter chat completions API."""
+        try:
+            from openai import OpenAI
+            client = OpenAI(api_key=api_key, base_url="https://openrouter.ai/api/v1", timeout=timeout)
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            resp = client.chat.completions.create(model="openai/gpt-4o-mini", messages=messages, temperature=self.temperature)
+            return resp.choices[0].message.content.strip()
+        except Exception as e:
+            logger.warning(f"OpenRouter API call failed: {e}")
+            return None
+
     def generate(self, prompt: str, system_prompt: str = "") -> str:
         """Route prompt to configured model provider with zero-overhead fallback."""
         # 1. Google Gemini (REST API with urllib - zero pip package dependency)
@@ -440,6 +455,17 @@ class LLMProvider:
                 except Exception as e:
                     logger.warning(f"OpenAI failover failed: {e}")
 
+            # Secondary Failover Option 3: OpenRouter
+            openrouter_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+            if openrouter_key:
+                try:
+                    logger.info("Attempting secondary provider failover: OpenRouter")
+                    openrouter_resp = self._call_openrouter(prompt, system_prompt, openrouter_key)
+                    if openrouter_resp:
+                        return openrouter_resp
+                except Exception as e:
+                    logger.warning(f"OpenRouter failover failed: {e}")
+
             logger.info("Falling back to deterministic Grounded Generator.")
             return self._mock_generate(prompt)
 
@@ -465,7 +491,18 @@ class LLMProvider:
                 return openai_resp
             return self._mock_generate(prompt)
 
-        # 4. Ollama (Local free daemon)
+        # 4. OpenRouter
+        elif self.provider in ["openrouter"]:
+            api_key = os.getenv("OPENROUTER_API_KEY", "").strip()
+            if not api_key:
+                logger.info("OPENROUTER_API_KEY not set. Using Grounded Generator.")
+                return self._mock_generate(prompt)
+            openrouter_resp = self._call_openrouter(prompt, system_prompt, api_key)
+            if openrouter_resp:
+                return openrouter_resp
+            return self._mock_generate(prompt)
+
+        # 5. Ollama (Local free daemon)
         elif self.provider == "ollama":
             try:
                 import urllib.request
