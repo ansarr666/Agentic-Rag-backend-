@@ -747,6 +747,13 @@ class RAGPipeline:
                     "Do you work with clients outside India?",
                     "How much does it cost to build a mobile app?",
                 ]
+            elif small_talk == "booking":
+                suggestions = [
+                    "What happens during a discovery call?",
+                    "How much does a typical project cost?",
+                    "What development services do you offer?",
+                    "How quickly can OrionSoft start on my project?",
+                ]
             return {
                 "answer": SMALL_TALK_REPLIES[small_talk],
                 "suggested_questions": suggestions,

@@ -23,6 +23,16 @@ _SMALL_TALK_INTENTS = {
     "negation": {"no", "nope", "nah", "nop", "no no", "nope nope", "nah nah"},
     "filler": {"maybe", "idk", "i dont know", "i don't know", "dunno", "hmm", "hmmm",
                "um", "uh", "ah", "oh", "ohh", "aha", "whatever"},
+    "booking": {
+        "book a call", "book call", "booking a call", "schedule a call", "schedule call",
+        "schedule a discovery call", "book a discovery call", "discovery call",
+        "book consultation", "schedule consultation", "book a consultation", "schedule a meeting",
+        "book meeting", "book a meeting", "i want to book a call", "can i book a call",
+        "can we book a call", "can we schedule a call", "how to book a call",
+        "how do i book a call", "setup a call", "set up a call", "talk to sales",
+        "talk to an expert", "talk to expert", "contact sales", "call me", "request a call",
+        "schedule demo", "book demo", "book a demo", "call", "book", "schedule"
+    },
 }
 
 # Category B safety net: short non-questions without any of these are asked to rephrase
@@ -34,10 +44,12 @@ _INTENT_KEYWORDS = (
     "app", "web", "software", "seo", "marketing", "pric", "service", "develop", "mobile",
     "android", "ios", "iphone", "cloud", "security", "commerce", "store", "chatbot",
     "payment", "server", "custom", "design",
+    # booking and consultation topics
+    "book", "call", "schedule", "meeting", "consult", "consultation", "demo", "expert", "talk", "hire", "quote", "phone",
 )
 
 # When several small-talk phrases are combined, the most meaningful one picks the reply
-_COMBO_PRIORITY = ("bye", "thanks", "greeting", "negation", "affirmation", "ack", "filler")
+_COMBO_PRIORITY = ("booking", "bye", "thanks", "greeting", "negation", "affirmation", "ack", "filler")
 
 SMALL_TALK_REPLIES = {
     "greeting": (
@@ -52,6 +64,10 @@ SMALL_TALK_REPLIES = {
     "filler": (
         "I'm here! Feel free to ask about OrionSoft's services, software development, "
         "mobile apps, AI solutions, or project pricing."
+    ),
+    "booking": (
+        "We'd love to set up a free discovery call with our solutions engineering team! "
+        "You can share your phone number, preferred date and time, or what you're looking to build right here, and our consultants will connect with you."
     ),
     "rephrase": (
         "Could you please rephrase that as a complete question or tell me what you're looking for?\n\n"

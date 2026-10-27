@@ -134,9 +134,10 @@ def _send(to: str, subject: str, html: str) -> bool:
         try:
             import resend
             resend.api_key = resend_key
+            to_list = [addr.strip() for addr in to.split(",") if addr.strip()] if isinstance(to, str) else [to]
             payload = {
                 "from": from_addr,
-                "to": [to],
+                "to": to_list,
                 "subject": subject,
                 "html": html,
             }
