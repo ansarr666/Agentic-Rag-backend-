@@ -129,33 +129,47 @@ def _send(to: str, subject: str, html: str) -> bool:
     resend_key = os.getenv("RESEND_API_KEY", RESEND_API_KEY).strip()
     smtp_host = os.getenv("SMTP_HOST", "").strip()
 
+    to_list = [addr.strip() for addr in to.split(",") if addr.strip()] if isinstance(to, str) else [to]
+    if not to_list:
+        return False
+
     # 1. Resend API
     if resend_key:
         try:
             import resend
             resend.api_key = resend_key
-            to_list = [addr.strip() for addr in to.split(",") if addr.strip()] if isinstance(to, str) else [to]
-            payload = {
-                "from": from_addr,
-                "to": to_list,
-                "subject": subject,
-                "html": html,
-            }
-            if reply_to:
-                payload["reply_to"] = reply_to
-            resend.Emails.send(payload)
-            logger.info("Email sent via Resend to %s: %s", to, subject)
-            return True
-        except Exception as e:
-            logger.warning("Resend send failed for %s: %s", to, e)
-            if "not verified" in str(e).lower() and "onboarding@resend.dev" not in from_addr:
+
+            delivered_any = False
+            for target in to_list:
+                payload = {
+                    "from": from_addr,
+                    "to": [target],
+                    "subject": subject,
+                    "html": html,
+                }
+                if reply_to:
+                    payload["reply_to"] = reply_to
                 try:
-                    payload["from"] = "OrionSoft AI <onboarding@resend.dev>"
                     resend.Emails.send(payload)
-                    logger.info("Email sent via Resend fallback (onboarding@resend.dev) to %s", to)
-                    return True
-                except Exception as fallback_err:
-                    logger.warning("Resend fallback failed for %s: %s", to, fallback_err)
+                    logger.info("Email sent via Resend to %s: %s", target, subject)
+                    delivered_any = True
+                except Exception as send_err:
+                    err_str = str(send_err).lower()
+                    if ("not verified" in err_str or "testing emails" in err_str or "please verify a domain" in err_str) and "onboarding@resend.dev" not in payload["from"]:
+                        try:
+                            payload["from"] = "OrionSoft AI <onboarding@resend.dev>"
+                            resend.Emails.send(payload)
+                            logger.info("Email sent via Resend fallback (onboarding@resend.dev) to %s", target)
+                            delivered_any = True
+                        except Exception as fb_err:
+                            logger.warning("Resend fallback delivery failed for %s: %s", target, fb_err)
+                    else:
+                        logger.warning("Resend send failed for %s: %s", target, send_err)
+
+            if delivered_any:
+                return True
+        except Exception as e:
+            logger.warning("Resend initialization failed: %s", e)
 
     # 2. SMTP fallback
     if smtp_host:
