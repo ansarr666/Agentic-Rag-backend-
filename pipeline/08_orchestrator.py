@@ -739,10 +739,10 @@ class RAGPipeline:
                 "latency_ms": round(elapsed_ms, 2),
             }
 
-        small_talk = detect_small_talk(user_question)
+        small_talk = detect_small_talk(user_question, history=history)
         if small_talk:
             suggestions = []
-            if small_talk in ("rephrase", "greeting", "filler"):
+            if small_talk in ("greeting", "filler"):
                 suggestions = [
                     "What software development services do you offer?",
                     "Can you build custom AI chatbots and web apps?",
@@ -756,6 +756,7 @@ class RAGPipeline:
                     "What development services do you offer?",
                     "How quickly can OrionSoft start on my project?",
                 ]
+            # For "thanks", "bye", "negation", "ack", and "rephrase": suggestions are empty []
             return {
                 "answer": SMALL_TALK_REPLIES[small_talk],
                 "suggested_questions": suggestions,

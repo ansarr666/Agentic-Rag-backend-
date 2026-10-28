@@ -16,11 +16,19 @@ _SMALL_TALK_INTENTS = {
                  "how are you", "how are you doing", "hi how are you", "hello how are you",
                  "hi there how are you", "hey how are you", "who are you", "what can you do"},
     "thanks": {"thanks", "thank you", "thx", "ty", "thanks a lot", "thanks so much", "thank you so much",
-               "much appreciated"},
-    "bye": {"bye", "goodbye", "see you"},
-    "ack": {"ok", "okay", "k", "cool", "great", "nice"},
+               "much appreciated", "okay thanks", "ok thanks", "ok thank you", "okay thank you"},
+    "bye": {"bye", "goodbye", "see you", "see ya", "cya", "bye bye", "byebye", "have a good day", "have a great day", "take care"},
+    "ack": {"ok", "okay", "k", "cool", "great", "nice", "got it", "understood"},
     "affirmation": {"yes", "yea", "yep", "yeah", "yup", "sure", "alright", "ok ok", "okok", "fine", "cool cool"},
-    "negation": {"no", "nope", "nah", "nop", "no no", "nope nope", "nah nah"},
+    "negation": {
+        "no", "nope", "nah", "nop", "no no", "nope nope", "nah nah", "no thanks", "no thank you",
+        "no thx", "no ty", "no need", "i said no", "i told you no", "already said no", "said no",
+        "nothing", "nothing else", "nothing more", "nothing right now", "not really",
+        "i am good", "im good", "i'm good", "all good", "we are good", "we're good",
+        "that's all", "thats all", "that is all", "that's it", "thats it", "that is it",
+        "dont need anything", "don't need anything", "not now", "not right now",
+        "leave it", "never mind", "nevermind", "no more"
+    },
     "filler": {"maybe", "idk", "i dont know", "i don't know", "dunno", "hmm", "hmmm",
                "um", "uh", "ah", "oh", "ohh", "aha", "whatever"},
     "booking": {
@@ -59,46 +67,60 @@ SMALL_TALK_REPLIES = {
         "Hi! I'm OrionSoft AI. I can help you explore our software development, mobile apps, "
         "AI solutions, cloud services, and company information. What would you like to know?"
     ),
-    "thanks": "You're welcome! Anything else I can help with?",
-    "bye": "Goodbye! Come back anytime you need help.",
-    "ack": "Got it. What else can I help you with?",
+    "thanks": "You're welcome! Let me know if you need anything else, or feel free to reach out whenever you're ready.",
+    "bye": "Goodbye! Feel free to reach out anytime if you need help with a software or digital project. Have a wonderful day!",
+    "ack": "Got it. Feel free to ask if there's anything you'd like to discuss.",
     "affirmation": "Got it! What would you like to know?",
-    "negation": "Understood. Is there something specific I can help with?",
+    "negation": "No problem! Feel free to reach out anytime if you have questions or want to discuss a project in the future. Have a great day!",
     "filler": (
         "I'm here! Feel free to ask about OrionSoft's services, software development, "
-        "mobile apps, AI solutions, or project pricing."
+        "mobile apps, AI solutions, or project pricing whenever you're ready."
     ),
     "booking": (
         "We'd love to set up a free discovery call with our solutions engineering team! "
         "You can share your phone number, preferred date and time, or what you're looking to build right here, and our consultants will connect with you."
     ),
     "rephrase": (
-        "Could you please rephrase that as a complete question or tell me what you're looking for?\n\n"
-        "OrionSoft Technologies provides full-cycle digital and software services, including:\n"
-        "• **Custom Software & Web Development** (web portals, internal business tools, SaaS)\n"
-        "• **Mobile App Development** (native iOS & Android, on-demand platforms, cross-platform apps)\n"
-        "• **AI & Generative AI** (smart AI chatbots, process automation, predictive systems)\n"
-        "• **Cloud & Cybersecurity** (AWS/Google Cloud migrations, security audits, threat protection)\n"
-        "• **Digital Marketing & SEO** (organic search ranking, PPC advertising, brand design)\n"
-        "• **Staff Augmentation** (dedicated vetted developers and engineers)\n\n"
-        "For example, you could ask:\n"
-        "• *'What software development or mobile app services does OrionSoft provide?'*\n"
-        "• *'Can you build custom AI solutions or chatbots for my website?'*\n"
-        "• *'Do you work with international clients outside India?'*\n"
-        "• *'How much does it cost to build a custom application or website?'*\n"
-        "• *'Can I hire dedicated developers from your team?'*"
+        "Could you please share a bit more detail about what you're looking for? "
+        "I can help with custom software development, mobile apps, AI solutions, web development, cloud services, and digital marketing."
     ),
 }
 
-def detect_small_talk(query: str) -> Optional[str]:
-    """Return the small-talk intent for exact-match fillers, or 'rephrase' for short keyword-less non-questions."""
-    q = query.strip().lower().rstrip("!.,?").strip()
+def detect_small_talk(query: str, history: Optional[List[Dict[str, str]]] = None) -> Optional[str]:
+    """Return the small-talk intent for exact-match fillers, closure phrases, or 'rephrase' for short keyword-less non-questions."""
+    # Strip quotes, punctuation, and extra whitespace
+    clean_q = re.sub(r"[\'\"`!.,?]+", " ", query).strip().lower()
+    q = re.sub(r"\s+", " ", clean_q).strip()
+    if not q:
+        return None
+
+    # 1. Exact match in intents
     for intent, phrases in _SMALL_TALK_INTENTS.items():
         if q in phrases:
             return intent
 
-    # Combined small talk ("okay thanks", "ok, bye"): every word must belong to a known phrase
-    tokens = re.sub(r"[!.,?]+", " ", q).split()
+    # 2. Closure and negation pattern match (e.g. "i said no", "i told you no", "no thanks", "nothing else", "all good")
+    closure_patterns = [
+        r"\b(?:i\s+said|i\s+told\s+you|already\s+said|i\s+say)\s+no\b",
+        r"\bno\s+(?:thanks|thank\s+you|thx|ty|need|more|problem)\b",
+        r"\b(?:nothing|not\s+much)\s*(?:else|more|right\s+now)?\b",
+        r"\b(?:that\s*s|thats|that\s+is)\s+(?:all|it)\b",
+        r"\b(?:i\s*m|im|i\s+am|we\s*re|were|we\s+are)\s+(?:all\s+)?good\b",
+        r"\b(?:not|no)\s+(?:really|now|right\s+now|today)\b",
+    ]
+    for cp in closure_patterns:
+        if re.search(cp, q):
+            return "negation"
+
+    # 3. Contextual dialogue check: if assistant asked if they need anything else and user declined
+    if history:
+        last_bot = next((t.get("content", "").lower() for t in reversed(history) if t.get("role") in ("assistant", "bot")), "")
+        if any(h in last_bot for h in ["anything else", "what else", "help with", "something specific"]):
+            if q in {"no", "nope", "nah", "nothing", "all good", "i said no", "no need", "we are good"}:
+                return "negation"
+
+    # 4. Combined small talk ("okay thanks", "ok, bye"): every word must belong to a known phrase
+    tokens = q.split()
     found, i = [], 0
     while i < len(tokens):
         for n in range(min(5, len(tokens) - i), 0, -1):
@@ -114,6 +136,7 @@ def detect_small_talk(query: str) -> Optional[str]:
     if found:
         return min(found, key=_COMBO_PRIORITY.index)
 
+    # 5. Short keyword-less non-questions safety net
     words = q.split()
     keywords = _INTENT_KEYWORDS + tuple(AgentRouter.CONFIDENTIAL_INTERNAL_TERMS) + tuple(AgentRouter.PUBLIC_EXTERNAL_TRIGGERS)
     if (0 < len(words) <= 3
