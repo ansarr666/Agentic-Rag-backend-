@@ -93,12 +93,12 @@ TRUSTED_PROXY_COUNT = int(os.getenv("TRUSTED_PROXY_COUNT") or "0")
 if TRUSTED_PROXY_COUNT:
     app.wsgi_app = ProxyFix(app.wsgi_app, x_for=TRUSTED_PROXY_COUNT, x_proto=TRUSTED_PROXY_COUNT)
 
-# CORS: only the listed origins; for /api/public/* allow all origins by default if unset
+# CORS: allow origins across all /api/* routes
 ALLOWED_ORIGINS = [o.strip() for o in os.getenv("ALLOWED_ORIGINS", "").split(",") if o.strip()]
 if ALLOWED_ORIGINS:
-    CORS(app, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}})
+    CORS(app, resources={r"/api/*": {"origins": ALLOWED_ORIGINS}}, supports_credentials=True)
 else:
-    CORS(app, resources={r"/api/public/*": {"origins": "*"}})
+    CORS(app, resources={r"/api/*": {"origins": "*"}})
 
 
 @app.before_request
@@ -110,6 +110,9 @@ def _start_request():
 @app.after_request
 def _log_request(response):
     response.headers["X-Request-ID"] = g.get("request_id", "")
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, X-API-Key, X-Request-ID"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS, PUT, DELETE" 
     if request.path.startswith("/api/") and request.path != "/api/health":
         latency_ms = round((time.perf_counter() - g.get("start_time", time.perf_counter())) * 1000, 2)
         logger.info("request", extra={"method": request.method, "status": response.status_code, "latency_ms": latency_ms})
