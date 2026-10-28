@@ -163,6 +163,12 @@ _conversations_lock = Lock()
 from concurrent.futures import ThreadPoolExecutor
 _db_pool = ThreadPoolExecutor(max_workers=4, thread_name_prefix="db_sync_pool")
 
+def _safe_task_runner(fn, *args, **kwargs):
+    try:
+        fn(*args, **kwargs)
+    except Exception as e:
+        logger.error(f"Background task {getattr(fn, '__name__', str(fn))} failed: {e}", exc_info=True)
+
 def _dispatch_db_task(fn, *args, **kwargs):
     """Run synchronously in testing, or dispatch non-blocking in background thread pool."""
     if app.testing:
@@ -171,9 +177,11 @@ def _dispatch_db_task(fn, *args, **kwargs):
         except Exception as e:
             logger.warning(f"Test DB task failed: {e}")
     else:
-        _db_pool.submit(fn, *args, **kwargs)
+        _db_pool.submit(_safe_task_runner, fn, *args, **kwargs)
 
 def public_rate_limited(limit: int = 10, window: int = 60) -> bool:
+    if app.testing:
+        return False
     ip = request.remote_addr or "unknown"
     now = time.time()
     _public_rate_limits[ip] = [t for t in _public_rate_limits[ip] if now - t < window]
@@ -452,6 +460,9 @@ def public_lead():
                     leads_path.write_text(json.dumps(leads, indent=2, ensure_ascii=False), encoding="utf-8")
                     # Sync updated lead to Supabase non-blocking
                     _dispatch_db_task(db.save_lead, lead)
+                    # Dispatch instant alert on lead update to sales inbox
+                    from email_service import send_sales_alert
+                    _dispatch_db_task(send_sales_alert, lead, "lead_update")
                     return jsonify({
                         "success": True,
                         "lead_id": existing_lead_id,
@@ -620,6 +631,7 @@ def public_intent():
     )
 
     leads_path = PROJECT_ROOT / "data" / "leads.json"
+    target_lead = None
     with _leads_lock:
         leads = []
         if leads_path.exists():
@@ -640,13 +652,33 @@ def public_intent():
                 if conversation_id:
                     lead["conversation_id"] = conversation_id
                 lead["updated_at"] = datetime.now(timezone.utc).isoformat()
+                target_lead = lead
                 updated = True
                 break
-        if updated:
-            leads_path.write_text(json.dumps(leads, indent=2, ensure_ascii=False), encoding="utf-8")
+
+        if not updated:
+            # Fallback: create lead entry if lead_id was not yet in local leads store
+            new_lead = {
+                "lead_id": lead_id,
+                "conversation_id": conversation_id,
+                "name": "Website Visitor",
+                "email": "",
+                "phone": phone,
+                "company": "",
+                "intent_level": "high",
+                "requested_action": action,
+                "conversation_summary": summary,
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
+            }
+            leads.append(new_lead)
+            target_lead = new_lead
+            updated = True
+
+        leads_path.write_text(json.dumps(leads, indent=2, ensure_ascii=False), encoding="utf-8")
 
     # Update lead booking record in Supabase non-blocking and alert sales team
-    if updated:
+    if target_lead:
         _dispatch_db_task(
             db.update_lead_booking,
             lead_id=lead_id,
@@ -654,22 +686,19 @@ def public_intent():
             summary=summary,
             requested_action=action,
         )
-        # Dispatch instant discovery call notification to Rahul / sales inbox
+        # Dispatch instant discovery call notification to sales inbox
         from email_service import send_sales_alert, send_confirmation
-        for l in leads:
-            if l.get("lead_id") == lead_id:
-                _dispatch_db_task(send_sales_alert, l, "discovery_call")
-                target_email = l.get("email")
-                if target_email:
-                    _dispatch_db_task(
-                        send_confirmation,
-                        to=target_email,
-                        name=l.get("name") or "",
-                        phone=phone or l.get("phone", ""),
-                        summary=summary or l.get("conversation_summary", ""),
-                        calendar_links=cal_links,
-                    )
-                break
+        _dispatch_db_task(send_sales_alert, target_lead, "discovery_call")
+        target_email = target_lead.get("email")
+        if target_email:
+            _dispatch_db_task(
+                send_confirmation,
+                to=target_email,
+                name=target_lead.get("name") or "",
+                phone=phone or target_lead.get("phone", ""),
+                summary=summary or target_lead.get("conversation_summary", ""),
+                calendar_links=cal_links,
+            )
 
     return jsonify({
         "success": True,

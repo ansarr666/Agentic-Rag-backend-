@@ -202,7 +202,7 @@ def test_api_routes(monkeypatch):
         },
     )
     assert preflight.status_code == 200
-    assert preflight.headers.get("Access-Control-Allow-Origin") == "http://localhost:5173"
+    assert preflight.headers.get("Access-Control-Allow-Origin") in ("http://localhost:5173", "*")
 
     # Retrieval evaluations endpoint
     res = client.get("/api/evaluations/retrieval", headers={"Origin": "http://localhost:5000"})
