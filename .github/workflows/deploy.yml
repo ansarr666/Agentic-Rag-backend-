@@ -1,0 +1,45 @@
+name: Deploy to Production Droplet
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    name: Deploy to DigitalOcean Droplet
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.DROPLET_HOST }}
+          username: ${{ secrets.DROPLET_USER }}
+          key: ${{ secrets.DROPLET_SSH_KEY }}
+          passphrase: ${{ secrets.DROPLET_PASSPHRASE }}
+          password: ${{ secrets.DROPLET_PASSWORD }}
+          port: 22
+          script: |
+            echo "==> Deploying Agentic RAG Backend to Production..."
+            cd /home/deploy/Agentic-Rag-backend- || cd /home/deploy/Agentic-Rag-backend
+            
+            # Stash any local uncommitted files to prevent pull conflicts
+            git stash
+            
+            # Pull latest changes from main branch
+            git pull origin main
+            
+            # Install any new dependencies if requirements changed
+            source .venv/bin/activate
+            pip install -r requirements.txt --quiet
+            
+            # Restart Gunicorn cleanly
+            echo "==> Restarting Gunicorn server..."
+            pkill -f "gunicorn" || true
+            sleep 2
+            .venv/bin/gunicorn --workers 1 --threads 2 --timeout 180 --bind 127.0.0.1:5000 app:app --daemon
+            
+            echo "==> Deployment Complete! Health Check:"
+            sleep 3
+            curl -s http://127.0.0.1:5000/api/health || echo "Server is booting up..."
