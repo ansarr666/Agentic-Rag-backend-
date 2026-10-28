@@ -104,10 +104,10 @@ Arithmetic calculations (e.g., *"If our cloud budget is $184,500 and we reduce s
   > *"The available company documents do not specify this information."*
 - This contract guarantees that ungrounded speculation cannot reach the user.
 
-### E. Two-Step Verified Lead Capture & 1-Click Calendar Booking
-- **Step 1**: Captures prospect name, company, and email with automated syntax validation, disposable domain filtering (30+ providers blocked), and live DNS domain existence checks.
-- **Step 2**: Sends a cryptographically secure 6-digit OTP (10-minute TTL) via Resend.
-- **High-Intent Discovery Call Booking**: Automatically identifies intent in conversation turns, prompts for contact info, persists records to Supabase PostgreSQL (with local SQLite dual-write backup), and produces 1-click **Google Calendar** and **Outlook / Office 365** web links and RFC 5545 **`.ics`** invites.
+### E. Verified Lead Qualification & 1-Click Calendar Booking
+- **Prospect Verification**: Captures prospect name, company, and email with automated syntax validation, disposable domain filtering (30+ providers blocked), and live DNS domain existence checks.
+- **Real-Time Executive Dispatch**: Verified inquiries are instantly dispatched to sales leadership inboxes with an AI conversational summary.
+- **High-Intent Discovery Call Booking**: Automatically identifies intent in conversation turns, prompts for contact info, persists records to Supabase PostgreSQL (with local SQLite dual-write backup), and produces 1-click **Google Calendar** and **Outlook / Office 365** web links and RFC 5545 **.ics** invites.
 
 ---
 

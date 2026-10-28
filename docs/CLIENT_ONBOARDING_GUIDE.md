@@ -97,7 +97,7 @@ If you want the assistant accessible on a dedicated page (e.g., `yourcompany.com
 
 * **Zero Hallucination ("Rule 6" Contract)**: If an answer is not backed by evidence in your approved documents, the assistant explicitly declines to answer and routes the visitor to book a call with your human team.
 * **Anti-Exfiltration Shield**: Internal keywords, proprietary data, and sensitive policies are strictly blocked from external public search tools.
-* **Two-Step Verified Leads**: Prospects must verify their identity via a 6-digit cryptographic OTP sent to their email, blocking spam bots and invalid inquiries.
+* **Verified Lead Qualification**: Automated screening against 30+ disposable email domains, RFC-compliant syntax checking, and instant sales leadership dispatch.
 * **Full Data Ownership**: Your documentation and visitor records are strictly isolated. Your data is **never** used to train public foundation models.
 
 ---
