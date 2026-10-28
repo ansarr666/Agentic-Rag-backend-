@@ -77,8 +77,9 @@ SMALL_TALK_REPLIES = {
         "mobile apps, AI solutions, or project pricing whenever you're ready."
     ),
     "booking": (
-        "We'd love to set up a free discovery call with our solutions engineering team! "
-        "You can share your phone number, preferred date and time, or what you're looking to build right here, and our consultants will connect with you."
+        "We would love to connect with you on a call! You can book a free discovery call directly using "
+        "the 'Book a Call' option, or simply share your phone number and preferred time right here. "
+        "Our solutions engineering team will get in touch to discuss your project."
     ),
     "rephrase": (
         "Could you please share a bit more detail about what you're looking for? "
@@ -93,6 +94,20 @@ def detect_small_talk(query: str, history: Optional[List[Dict[str, str]]] = None
     q = re.sub(r"\s+", " ", clean_q).strip()
     if not q:
         return None
+
+    # 0. High-priority booking and call requests (handles typos like 'ook me call', 'book me call', 'give me a call', etc.)
+    booking_patterns = [
+        r"\b(?:b?ook|schedule|arrange|set\s*up|request|want|need|give|get)\s+(?:me\s+)?(?:a\s+)?(?:discovery\s+|consultation\s+|phone\s+|sales\s+)?(?:call|meeting|appointment|demo)\b",
+        r"\b(?:b?ook|schedule|set\s*up)\s+(?:me\s+)?(?:call|meeting)\b",
+        r"\b(?:call|phone)\s+(?:me|us|back)(?:\s+please|\s+now)?\b",
+        r"\b(?:can|could|would)\s+(?:you|someone|we)\s+(?:call|reach|contact)\s+(?:me|us)\b",
+        r"\b(?:talk|speak)\s+(?:to|with)\s+(?:a\s+|an\s+)?(?:human|expert|agent|sales|consultant|team|someone)\b",
+        r"\b(?:i\s+want\s+to|i\s+would\s+like\s+to|can\s+i|how\s+do\s+i)\s+(?:talk|call|speak|meet|connect)\b",
+        r"\b(?:discovery\s+call|schedule\s+call|book\s+call|meeting\s+request|consultation\s+call)\b",
+    ]
+    for bp in booking_patterns:
+        if re.search(bp, q):
+            return "booking"
 
     # 1. Exact match in intents
     for intent, phrases in _SMALL_TALK_INTENTS.items():

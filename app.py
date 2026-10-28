@@ -512,7 +512,8 @@ INTENT_SIGNALS = [
     "i'd like a consultation", "i would like a consultation", "get a quote",
     "talk to", "speak with", "contact me", "book a", "schedule a", "hire",
     "build me", "proposal", "estimate", "starting a project", "our company needs",
-    "we are a company",
+    "we are a company", "call", "book", "schedule", "ook me", "book me", "call me",
+    "phone", "meeting", "consult",
 ]
 
 def detect_project_intent(question: str) -> str:
