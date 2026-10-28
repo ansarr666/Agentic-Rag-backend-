@@ -28,7 +28,7 @@ if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 from config import load_config
-from pipeline import RAGPipeline, IngestionPipeline
+from pipeline import RAGPipeline, IngestionPipeline, is_pure_english
 from evaluation.run_eval import run_decision_evaluation, run_retrieval_evaluation
 import db
 
@@ -580,7 +580,7 @@ def public_conversation():
         return jsonify({"error": "Something went wrong. Please try again."}), 500
 
     answer = result.get("answer") or ""
-    suggestions = (result.get("suggested_questions") or [])[:4]
+    suggestions = [s for s in (result.get("suggested_questions") or []) if is_pure_english(s)][:4]
     intent = detect_project_intent(question)
 
     _persist_conversation(lead_id, conversation_id, name, question, answer)

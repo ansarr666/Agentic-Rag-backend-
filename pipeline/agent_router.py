@@ -44,6 +44,9 @@ _INTENT_KEYWORDS = (
     "app", "web", "software", "seo", "marketing", "pric", "service", "develop", "mobile",
     "android", "ios", "iphone", "cloud", "security", "commerce", "store", "chatbot",
     "payment", "server", "custom", "design",
+    # enterprise & specialized software systems (case-insensitive)
+    "crm", "erp", "saas", "api", "pos", "cms", "lms", "mvp", "portal", "dashboard",
+    "database", "backend", "frontend", "fullstack", "devops", "automation", "build", "create", "make", "need", "want",
     # booking and consultation topics
     "book", "call", "schedule", "meeting", "consult", "consultation", "demo", "expert", "talk", "hire", "quote", "phone",
 )

@@ -185,6 +185,7 @@ Respond ONLY with a valid JSON object (no markdown fences, no extra text) with e
 {"response": "your conversational reply", "suggested_questions": ["question 1", "question 2", "question 3", "question 4"]}
 
 RULES FOR "suggested_questions"
+- PURE ENGLISH ONLY (STRICT REQUIREMENT): Every suggested question MUST be written in 100% standard, professional English. Absolutely NEVER generate suggestion pills in Hinglish, Hindi, or mixed languages under any circumstances (no "kaam", "karta", "sakta", "bana", "dete", "kya", etc.), even if the visitor's message or the retrieved knowledge contains Hinglish phrases.
 - Provide exactly 4 concise, natural follow-up questions written from the visitor's point of view.
 - Ground them in OrionSoft's actual capabilities and the conversation so far.
 - Make them relevant to the visitor's latest message and apparent intent.
@@ -230,8 +231,70 @@ def _clean_question(text: str) -> str:
     return q
 
 
+# Unambiguous Romanized Hindi / Hinglish tokens and common non-English markers
+HINGLISH_MARKERS = frozenset({
+    # Pronouns & interrogatives
+    "aap", "aapka", "aapke", "aapki", "tum", "tumhara", "tumhare", "tumhari",
+    "kya", "kyun", "kyu", "kaise", "kaisa", "kaisi", "kahan", "kidhar", "kitna", "kitne", "kitni", "kab", "kaun", "kon",
+    # Verbs & auxiliaries
+    "kaam", "karta", "karte", "karti", "karega", "karenge", "karegi", "karo", "karna", "kar", "kiya", "kiye",
+    "bana", "banate", "banata", "banati", "banaye", "banayenge", "banaoge", "banaenge", "banega", "banegi",
+    "sakta", "sakte", "sakti", "sakenge", "sakoge",
+    "hoon", "hun", "hai", "hain", "ho", "hoga", "hogi", "hoge", "honge",
+    "tha", "thi", "the", "raha", "rahe", "rahi",
+    "dete", "deta", "deti", "denge", "dega", "degi", "dena", "diya",
+    "chalate", "chalata", "chalati", "chalega", "chalegi", "chalenge",
+    "chahiye", "mangta", "lagta", "lagti", "lagega", "lagegi",
+    "aata", "aati", "aate", "aayega", "aayegi",
+    "batao", "batate", "batata", "batati", "bataye", "batayenge",
+    "humein", "humara", "humare", "humari",
+    "apna", "apne", "apni", "mera", "mere", "meri", "mujhe",
+    "saath", "bhi", "bhee", "lekin", "magar", "mein", "liye", "pe",
+    "wala", "wale", "wali", "waala",
+    "chota", "chote", "chhoti", "chhote", "bada", "bade", "badi",
+    "pehle", "bahar", "andar", "paise", "rupaye", "kharcha",
+    "jaisa", "jaise", "jaisi", "accha", "achha", "kuch", "zaroorat", "zarurat"
+})
+
+DEFAULT_ENGLISH_SUGGESTIONS = [
+    "What software development services do you offer?",
+    "Can you build custom mobile apps for iOS and Android?",
+    "How does OrionSoft estimate project costs and timelines?",
+    "How do I schedule a free discovery call with your team?",
+    "Can you build custom AI and chatbot solutions for our website?",
+    "Do you work with international clients outside India?",
+    "What technologies and tech stacks do you specialize in?",
+    "Can you modernize or redesign an existing web application?",
+    "Can I hire dedicated full-time developers from OrionSoft?",
+    "What digital marketing and SEO services do you provide?",
+]
+
+
+ALLOWED_NON_ASCII_CHARS = frozenset({"\u2018", "\u2019", "\u201c", "\u201d", "\u2013", "\u2014", "\u2022", "\u2026"})
+
+def is_pure_english(text: str) -> bool:
+    """Validate that a suggested question is exclusively in standard, grammatical English."""
+    if not text or not isinstance(text, str):
+        return False
+    clean = text.strip()
+    if not clean:
+        return False
+    # 1. Reject non-Latin characters (Devanagari, Arabic, Cyrillic, CJK, etc.)
+    for ch in clean:
+        if ord(ch) > 127 and ch not in ALLOWED_NON_ASCII_CHARS:
+            return False
+    # 2. Reject if any Romanized Hindi / Hinglish tokens are present
+    words = re.findall(r"[a-zA-Z]+", clean.lower())
+    if not words or len(words) < 2:
+        return False
+    for w in words:
+        if w in HINGLISH_MARKERS:
+            return False
+    return True
+
+
 def _extract_context_questions(chunks: List[Any]) -> List[str]:
-    """Pull real visitor-facing questions out of retrieved Q&A knowledge chunks."""
+    """Pull real visitor-facing questions out of retrieved Q&A knowledge chunks (pure English only)."""
     questions: List[str] = []
     for c in chunks:
         text = getattr(c, "text", "") or ""
@@ -240,17 +303,17 @@ def _extract_context_questions(chunks: List[Any]) -> List[str]:
             m = re.match(r"^(?:Q\d*|Question)\s*[:.)\-]\s*(.+)$", line, re.IGNORECASE)
             if m:
                 q = _clean_question(m.group(1))
-                if q and q not in questions:
+                if q and is_pure_english(q) and q not in questions:
                     questions.append(q)
     return questions
 
 
 def generate_contextual_suggestions(query: str, chunks: List[Any], embedder=None, count: int = 4) -> List[str]:
-    """Generate follow-up questions grounded in retrieved knowledge (fallback when LLM is unavailable)."""
+    """Generate follow-up questions grounded in retrieved knowledge (pure English only)."""
     q_clean = query.lower().rstrip("? \t.").strip()
     results: List[str] = []
     for cq in _extract_context_questions(chunks):
-        if cq.lower().rstrip("? \t.") == q_clean:
+        if not is_pure_english(cq) or cq.lower().rstrip("? \t.") == q_clean:
             continue
         if cq not in results:
             results.append(cq)
@@ -259,12 +322,12 @@ def generate_contextual_suggestions(query: str, chunks: List[Any], embedder=None
     if len(results) < count:
         for extra in generate_alternative_suggestions(query, embedder=embedder):
             extra = _clean_question(extra)
-            if extra.lower().rstrip("? \t.") == q_clean or extra in results:
+            if not is_pure_english(extra) or extra.lower().rstrip("? \t.") == q_clean or extra in results:
                 continue
             results.append(extra)
             if len(results) >= count:
                 break
-    return results[:count]
+    return [r for r in results if is_pure_english(r)][:count]
 
 class LLMProvider:
     """
@@ -775,19 +838,23 @@ class QuestionRecommender:
 
             for idx in top_indices:
                 cand = self.questions[idx].strip()
-                if cand.lower().rstrip("?") != q_clean.rstrip("?") and cand not in results:
+                if is_pure_english(cand) and cand.lower().rstrip("?") != q_clean.rstrip("?") and cand not in results:
                     results.append(cand)
                 if len(results) >= top_k:
                     break
 
-            return results[:top_k] if results else self.questions[:top_k]
+            filtered = [r for r in results if is_pure_english(r)]
+            if filtered:
+                return filtered[:top_k]
+            return [q for q in DEFAULT_ENGLISH_SUGGESTIONS if q.lower().rstrip("?") != q_clean.rstrip("?")][:top_k]
         except Exception as e:
             logger.warning(f"Error computing question recommendations: {e}")
-            return self.questions[:top_k]
+            return [q for q in DEFAULT_ENGLISH_SUGGESTIONS if q.lower().rstrip("?") != q_clean.rstrip("?")][:top_k]
 
 def generate_alternative_suggestions(query: str, embedder=None, count: int = 4) -> List[str]:
-    """Dynamically recommend verified questions from company documents."""
-    return QuestionRecommender.get_instance().recommend(query, embedder=embedder, top_k=count)
+    """Dynamically recommend verified questions from company documents (pure English only)."""
+    recs = QuestionRecommender.get_instance().recommend(query, embedder=embedder, top_k=count)
+    return [r for r in recs if is_pure_english(r)][:count]
 
 class GroundedGenerator:
     """Orchestrates prompt construction, LLM inference, and verifiable citation extraction."""
@@ -937,11 +1004,13 @@ class GroundedGenerator:
         )
 
     def _normalize_suggestions(self, query: str, suggestions: List[str], context_chunks: List[Any]) -> List[str]:
-        """Dedupe, filter, and ensure exactly four relevant, grounded suggestions."""
+        """Dedupe, filter, and ensure exactly four relevant, grounded suggestions in pure English only."""
         q_clean = query.lower().rstrip("? \t.").strip()
         seen = set()
         out: List[str] = []
         for s in suggestions:
+            if not is_pure_english(s):
+                continue
             key = s.lower().rstrip("? \t.")
             if not key or key == q_clean or key in seen:
                 continue
@@ -949,6 +1018,8 @@ class GroundedGenerator:
             out.append(s)
         if len(out) < 4:
             for extra in generate_contextual_suggestions(query, context_chunks, embedder=self.embedder):
+                if not is_pure_english(extra):
+                    continue
                 key = extra.lower().rstrip("? \t.")
                 if key == q_clean or key in seen:
                     continue
@@ -957,20 +1028,16 @@ class GroundedGenerator:
                 if len(out) >= 4:
                     break
         if len(out) < 4:
-            DEFAULT_QUESTIONS = [
-                "What software development services do you offer?",
-                "Can you build custom mobile apps for iOS and Android?",
-                "How does OrionSoft estimate project costs?",
-                "How do I schedule a free discovery call?",
-            ]
-            for dq in DEFAULT_QUESTIONS:
+            for dq in DEFAULT_ENGLISH_SUGGESTIONS:
+                if not is_pure_english(dq):
+                    continue
                 key = dq.lower().rstrip("? \t.")
                 if key != q_clean and key not in seen:
                     seen.add(key)
                     out.append(dq)
                 if len(out) >= 4:
                     break
-        return out[:4]
+        return [q for q in out if is_pure_english(q)][:4]
 
     def generate_conversational_response(
         self,
@@ -1030,7 +1097,7 @@ class GroundedGenerator:
             suggestions = [
                 _clean_question(s)
                 for s in data.get("suggested_questions", [])
-                if isinstance(s, str) and s.strip()
+                if isinstance(s, str) and s.strip() and is_pure_english(_clean_question(s))
             ]
             suggestions = list(dict.fromkeys(suggestions))
 

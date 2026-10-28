@@ -39,6 +39,8 @@ GroundedGenerator = _gen_mod.GroundedGenerator
 RAGResponse = _gen_mod.RAGResponse
 Citation = _gen_mod.Citation
 generate_alternative_suggestions = _gen_mod.generate_alternative_suggestions
+is_pure_english = _gen_mod.is_pure_english
+DEFAULT_ENGLISH_SUGGESTIONS = _gen_mod.DEFAULT_ENGLISH_SUGGESTIONS
 
 # Import core tools, router, evaluator, and structured contracts
 from .tools.calculator import CalculatorTool
@@ -770,14 +772,16 @@ class RAGPipeline:
                 cached = self.semantic_cache.lookup(user_question, q_emb, history=history, visitor_name=visitor_name)
                 if cached:
                     ans, sugs, sim = cached
-                    elapsed_ms = (time.perf_counter() - start_time) * 1000.0
-                    return {
-                        "answer": ans,
-                        "suggested_questions": sugs,
-                        "retrieved_chunks": 0,
-                        "latency_ms": round(elapsed_ms, 2),
-                        "cached": True,
-                    }
+                    clean_sugs = [s for s in sugs if is_pure_english(s)]
+                    if len(clean_sugs) == 4:
+                        elapsed_ms = (time.perf_counter() - start_time) * 1000.0
+                        return {
+                            "answer": ans,
+                            "suggested_questions": clean_sugs,
+                            "retrieved_chunks": 0,
+                            "latency_ms": round(elapsed_ms, 2),
+                            "cached": True,
+                        }
             except Exception as e:
                 logger.debug(f"Semantic cache lookup error: {e}")
 
@@ -812,6 +816,20 @@ class RAGPipeline:
         answer, suggestions, _gen_ms = self.generator.generate_conversational_response(
             user_question, top_chunks, history=history, visitor_name=visitor_name
         )
+
+        # Enforce pure English filter on all suggested question pills
+        clean_suggestions = [s for s in suggestions if is_pure_english(s)]
+        if len(clean_suggestions) < 4:
+            seen_keys = set(s.lower().rstrip("? \t.") for s in clean_suggestions)
+            q_clean = user_question.lower().rstrip("? \t.")
+            for dq in DEFAULT_ENGLISH_SUGGESTIONS:
+                k = dq.lower().rstrip("? \t.")
+                if k not in seen_keys and k != q_clean:
+                    seen_keys.add(k)
+                    clean_suggestions.append(dq)
+                if len(clean_suggestions) >= 4:
+                    break
+        suggestions = clean_suggestions[:4]
 
         # Store verified answer in semantic cache if safe and eligible
         if q_emb is not None and answer:

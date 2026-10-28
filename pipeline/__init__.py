@@ -45,6 +45,8 @@ LLMProvider = _m7.LLMProvider
 GroundedGenerator = _m7.GroundedGenerator
 RAGResponse = _m7.RAGResponse
 Citation = _m7.Citation
+is_pure_english = _m7.is_pure_english
+DEFAULT_ENGLISH_SUGGESTIONS = _m7.DEFAULT_ENGLISH_SUGGESTIONS
 
 # 08 Orchestrator
 IngestionPipeline = _m8.IngestionPipeline
@@ -88,6 +90,8 @@ __all__ = [
     "GroundedGenerator",
     "RAGResponse",
     "Citation",
+    "is_pure_english",
+    "DEFAULT_ENGLISH_SUGGESTIONS",
     "IngestionPipeline",
     "IngestionSummary",
     "RAGPipeline",

@@ -37,7 +37,7 @@ class QueryEngine:
     INTENT_MAP = {
         "service_inquiry": ["service", "offer", "provide", "do you", "what do you", "help", "work with"],
         "app_development": ["app", "mobile", "android", "iphone", "zomato", "uber", "on demand", "tracking", "login"],
-        "software_development": ["software", "custom", "booking", "inventory", "claims", "internal tool", "build"],
+        "software_development": ["software", "custom", "booking", "inventory", "claims", "internal tool", "build", "crm", "erp", "saas", "portal", "dashboard"],
         "cloud_services": ["cloud", "aws", "google cloud", "migrate", "hosting", "server"],
         "cybersecurity": ["security", "cybersecurity", "hack", "threat", "protect", "secure", "vulnerability"],
         "ai_and_chatbot": ["ai", "chatbot", "generative", "automate", "recommend", "personalize", "machine learning"],
@@ -209,7 +209,14 @@ class QueryEngine:
         "custm": {"display": "custom", "search": "custom software development"},
         "custome": {"display": "custom", "search": "custom software development"},
         "paymnt": {"display": "payment", "search": "payment gateway Stripe Razorpay"},
-        "pyament": {"display": "payment", "search": "payment gateway Stripe Razorpay"}
+        "pyament": {"display": "payment", "search": "payment gateway Stripe Razorpay"},
+
+        # Enterprise Systems & Acronyms (case-insensitive normalization)
+        "crm": {"display": "CRM", "search": "CRM custom customer relationship management software"},
+        "erp": {"display": "ERP", "search": "ERP custom enterprise resource planning software"},
+        "saas": {"display": "SaaS", "search": "SaaS cloud software platform web application"},
+        "cms": {"display": "CMS", "search": "CMS content management system website"},
+        "pos": {"display": "POS", "search": "POS point of sale billing system"}
     }
 
     CANONICAL_DOMAIN_TERMS = [
@@ -218,7 +225,7 @@ class QueryEngine:
         "developer", "developers", "hiring", "augmentation", "cloud",
         "aws", "cybersecurity", "security", "pricing", "estimate",
         "chatbot", "ai", "seo", "marketing", "ads",
-        "payment", "custom", "store", "online", "discovery"
+        "payment", "custom", "store", "online", "discovery", "crm", "erp", "saas", "portal", "dashboard"
     ]
 
     @classmethod
@@ -275,6 +282,14 @@ class QueryEngine:
             return "Do you build custom websites and web applications?"
         if any(w in q_lower for w in ["app", "mobil", "andro", "iphon"]):
             return "Do you build mobile apps for iPhone and Android?"
+        if any(w in q_lower for w in ["crm"]):
+            return "Do you build custom CRM systems and customer management tools?"
+        if any(w in q_lower for w in ["erp"]):
+            return "Do you build custom ERP systems and enterprise management software?"
+        if any(w in q_lower for w in ["saas", "platform"]):
+            return "Do you build SaaS platforms and cloud software applications?"
+        if any(w in q_lower for w in ["portal", "dashboard"]):
+            return "Do you build customer portals and business intelligence dashboards?"
         if any(w in q_lower for w in ["softwar", "custom"]):
             return "Do you build custom software and tools for businesses?"
         if any(w in q_lower for w in ["pric", "cost", "budg"]):
