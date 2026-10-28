@@ -16,13 +16,11 @@ from typing import Any, Dict, Optional
 
 logger = logging.getLogger(__name__)
 
-DEFAULT_SALES_EMAILS = "ansaranam.jmi@gmail.com, orionsofttechnologiespvt.ltd@gmail.com, anam@orionsofttechnologies.com, rahul@orionsofttechnologies.com, sakib@orionsofttechnologies.com"
+DEFAULT_SALES_EMAILS = "orionsofttechnologiespvt.ltd@gmail.com, anam@orionsofttechnologies.com, rahul@orionsofttechnologies.com, sakib@orionsofttechnologies.com"
 
 EMAIL_FROM = os.getenv("EMAIL_FROM", "OrionSoft AI <info@orionsofttechnologies.com>").strip()
 EMAIL_REPLY_TO = os.getenv("EMAIL_REPLY_TO", "orionsofttechnologiespvt.ltd@gmail.com").strip()
 SALES_NOTIFICATION_EMAIL = os.getenv("SALES_NOTIFICATION_EMAIL", DEFAULT_SALES_EMAILS).strip()
-if "ansaranam.jmi@gmail.com" not in SALES_NOTIFICATION_EMAIL:
-    SALES_NOTIFICATION_EMAIL = f"ansaranam.jmi@gmail.com, {SALES_NOTIFICATION_EMAIL}"
 RESEND_API_KEY = os.getenv("RESEND_API_KEY", "").strip()
 
 
